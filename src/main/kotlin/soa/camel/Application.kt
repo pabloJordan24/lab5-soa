@@ -41,8 +41,23 @@ class Router(meterRegistry: MeterRegistry) : RouteBuilder() {
 
     private val perKeywordMessages = TaggedCounter("per-keyword-messages", "keyword", meterRegistry)
 
+    fun limitNumber(cadena: String) : String {
+        var returnString="";
+        if (cadena.contains("max:")) {
+            returnString=cadena.replace("max:","?count=")
+        }
+        println("********" + returnString)
+        return returnString
+    }
+
+    // we want to limit the result of tweets per page -> filter.
+    // we´ll use count: https://camel.apache.org/components/3.7.x/twitter-search-component.html
     override fun configure() {
         from(DIRECT_ROUTE)
+            .process{ exchange ->
+                var keyw = exchange.getIn().getHeader("keywords")
+                if (keyw is String) exchange.getIn().setHeader("keywords", limitNumber(keyw))
+            }
             .toD("twitter-search:\${header.keywords}")
             .wireTap(LOG_ROUTE)
             .wireTap(COUNT_ROUTE)
